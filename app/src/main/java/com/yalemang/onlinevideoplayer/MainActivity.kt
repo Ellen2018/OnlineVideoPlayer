@@ -1,9 +1,12 @@
 package com.yalemang.onlinevideoplayer
 
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import com.shuyu.gsyvideoplayer.video.GSYADVideoPlayer
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import com.arialyy.aria.core.Aria
+import com.arialyy.aria.core.download.m3u8.M3U8VodOption
 import com.shuyu.gsyvideoplayer.video.StandardGSYVideoPlayer
+import java.io.File
 
 /**
  * 1.m3u8的在线播放
@@ -11,6 +14,8 @@ import com.shuyu.gsyvideoplayer.video.StandardGSYVideoPlayer
  * 3.m3u8投屏
  */
 class MainActivity : AppCompatActivity() {
+
+    private val permissionUtils = PermissionUtils(this)
 
     private var testM3U8Array = arrayOf(
         "https://ask.dcloud.net.cn/topic/m3u8",//无效
@@ -24,7 +29,17 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        onlineM3U8Play()
+        permissionUtils.startCheckFileReadWritePermission(0,object :
+            PermissionUtils.PermissionCallback {
+            override fun success() {
+                Toast.makeText(this@MainActivity,"开始下载",Toast.LENGTH_SHORT).show()
+                downLoadAndPlay()
+            }
+
+            override fun failure() {
+
+            }
+        })
     }
 
     /**
@@ -33,5 +48,27 @@ class MainActivity : AppCompatActivity() {
     private fun onlineM3U8Play(){
         standardGSYVideoPlayer = findViewById(R.id.video_player)
         standardGSYVideoPlayer.setUp(testM3U8Array[1],true,"测试m3u8")
+    }
+
+    private fun downLoadAndPlay(){
+        val option = M3U8VodOption() // 创建m3u8点播文件配
+        option.setUseDefConvert(false)
+        option.generateIndexFile()
+        val file = File(cacheDir,"test.video")
+        val taskId: Long = Aria.download(this)
+            .load(testM3U8Array[1]) //读取下载地址
+            .setFilePath(file.absolutePath) //设置文件保存的完整路径
+            .m3u8VodOption(option)   // 调整下载模式为m3u8点播
+            .create() //创建并启动下载
+
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        permissionUtils.onRequestPermissionsResult(requestCode, permissions, grantResults)
     }
 }
